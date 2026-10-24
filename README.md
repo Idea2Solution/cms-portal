@@ -1,4 +1,4 @@
-# D Orange CRM (Laravel)
+# idea2solution CRM (Laravel)
 
 Laravel 12 CRM built from the design in `design/crm4biz.html`.
 

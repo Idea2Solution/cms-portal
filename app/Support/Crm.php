@@ -26,7 +26,7 @@ class Crm
         'taxPct' => 0,
         'terms' => '',
         'company' => [
-            'name' => 'D Orange',
+            'name' => 'idea2solution',
             'tagline' => 'Conductors of Creativity',
             'address' => 'Highbank House, Exchange Street, Stockport, SK3 0ET, United Kingdom',
             'email' => 'info@dorange.com',

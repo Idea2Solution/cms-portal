@@ -26,7 +26,7 @@
 @endphp
 <div id="app">
   <aside id="side">
-    <div class="logo"><i>{{ mb_substr($crmSettings['company']['name'] ?: 'D', 0, 1) }}</i><div>{{ $crmSettings['company']['name'] }}</div></div>
+    <div class="logo"><i>{{ mb_strtoupper(mb_substr($crmSettings['company']['name'] ?: 'D', 0, 1)) }}</i><div>{{ $crmSettings['company']['name'] }}</div></div>
     <nav class="nav">
       @foreach ($nav as [$route, $label, $count])
         <a href="{{ route($route) }}" @class(['on' => $section === $route])>{{ $label }}@if ($count)<span class="cnt">{{ $count }}</span>@endif</a>
