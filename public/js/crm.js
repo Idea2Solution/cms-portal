@@ -97,8 +97,83 @@ document.addEventListener('change', e => {
     if (inq) inq.innerHTML = '<option value="">— none —</option>' + (c ? c.inquiries : []).map(i => `<option value="${i.id}">${esc(i.label)}</option>`).join('');
     const ag = $('[name=agent]', form);
     if (ag && c && c.agent && [...ag.options].some(o => o.value === c.agent)) ag.value = c.agent;
+    const pr = $('[name=proposal_id]', form);
+    if (pr) pr.innerHTML = '<option value="">— none —</option>' + (c ? c.proposals : []).map(p => `<option value="${p.id}">${esc(p.label)}</option>`).join('');
   }
+
+  // new invoice: picking a proposal copies its lines and terms (only into an empty invoice)
+  if (t.name === 'proposal_id' && form.hasAttribute('data-newinv')) {
+    const c = JSON.parse(form.dataset.companies)[$('[name=company_id]', form).value];
+    const p = c && c.proposals.find(x => String(x.id) === t.value);
+    if (p && !readItems(form).length) {
+      $('#its', form).innerHTML = '';
+      p.items.forEach(i => addItemRow(form, i));
+      $('[name=currency]', form).value = p.currency;
+      $('[name=tax_pct]', form).value = p.tax_pct;
+      $('[name=discount]', form).value = p.discount;
+      if (!$('[name=terms]', form).value && p.terms) $('[name=terms]', form).value = p.terms;
+      if (!$('[name=project]', form).value && p.project) $('[name=project]', form).value = p.project;
+    }
+  }
+
+  if (t.name === 'invoice_id' && form.hasAttribute('data-pay')) payHint(form, true);
+  if (form.hasAttribute('data-items')) recalc(form);
 });
+
+/* ---------- line items editor (proposals + invoices) ---------- */
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const fmt = (n, cur) => { try { return new Intl.NumberFormat('en-GB', {style: 'currency', currency: cur}).format(n); } catch (e) { return cur + ' ' + n.toFixed(2); } };
+const readItems = form => $$('.it-row', form).filter(r => $('.i-s', r).value.trim() || $('.i-d', r).value.trim() || $('.i-p', r).value);
+
+function addItemRow(form, i = {}) {
+  const tpl = $('#it-tpl', form).innerHTML.replaceAll('__i__', Date.now() + Math.floor(Math.random() * 1000));
+  $('#its', form).insertAdjacentHTML('beforeend', tpl);
+  const row = $('#its', form).lastElementChild;
+  $('.i-s', row).value = i.service || ''; $('.i-d', row).value = i.desc || '';
+  $('.i-q', row).value = i.qty ?? 1; $('.i-p', row).value = i.price ?? '';
+}
+
+function recalc(form) {
+  const box = $('#tot', form); if (!box) return;
+  let sub = 0;
+  $$('.it-row', form).forEach(r => { const a = num($('.i-q', r).value) * num($('.i-p', r).value); sub += a; $('.amt', r).textContent = a.toFixed(2); });
+  const cur = ($('[name=currency]', form) || {}).value || 'GBP';
+  const disc = Math.min(Math.max(num(($('[name=discount]', form) || {}).value), 0), sub);
+  const tax = (sub - disc) * num(($('[name=tax_pct]', form) || {}).value) / 100;
+  const total = sub - disc + tax;
+  let html = `<div>Subtotal <b>${fmt(sub, cur)}</b></div>`
+    + (disc ? `<div>Discount <b>− ${fmt(disc, cur)}</b></div>` : '')
+    + (tax ? `<div>Tax <b>${fmt(tax, cur)}</b></div>` : '')
+    + `<div class="gt">Total <b>${fmt(total, cur)}</b></div>`;
+  if (box.dataset.paid !== undefined) {
+    const paid = num(box.dataset.paid);
+    html += `<div>Paid <b>${fmt(paid, cur)}</b></div><div><b>Balance due</b> <b>${fmt(Math.max(0, total - paid), cur)}</b></div>`;
+  }
+  box.innerHTML = html;
+}
+
+document.addEventListener('input', e => {
+  const form = e.target.closest && e.target.closest('form[data-items]');
+  if (form) recalc(form);
+});
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act="it-add"],[data-act="it-del"]'); if (!el) return;
+  const form = el.closest('form');
+  if (el.dataset.act === 'it-add') addItemRow(form);
+  else if ($$('.it-row', form).length > 1) el.closest('tr').remove();
+  recalc(form);
+});
+$$('form[data-items]').forEach(recalc);
+
+/* ---------- payment form: balance hint, and fill the balance as the amount ---------- */
+function payHint(form, fillAmount) {
+  const inv = JSON.parse(form.dataset.invoices)[$('[name=invoice_id]', form).value];
+  $('#payhint', form).textContent = inv
+    ? `Invoice total ${fmt(inv.total, inv.currency)} · already paid ${fmt(inv.paid, inv.currency)} · balance ${fmt(inv.balance, inv.currency)} (${inv.currency})`
+    : '';
+  if (inv && fillAmount) $('[name=amount]', form).value = inv.balance || '';
+}
+$$('form[data-pay]').forEach(f => payHint(f, false));
 
 /* ---------- flash message from the server ---------- */
 const flash = $('#flash');

@@ -20,6 +20,14 @@ class Crm
     public const CURS = ['GBP', 'AED', 'USD', 'PKR', 'EUR'];
     public const SOCIALS = ['Facebook', 'Instagram', 'LinkedIn', 'TikTok', 'YouTube', 'X / Twitter', 'Other'];
     public const REMARK_KINDS = ['Call', 'WhatsApp', 'Email', 'Meeting', 'Note'];
+    public const PSTATUS = ['Draft', 'Sent', 'Under Discussion', 'Negotiation', 'Accepted', 'Rejected', 'Expired', 'Cancelled'];
+    public const OPEN_P = ['Draft', 'Sent', 'Under Discussion', 'Negotiation'];
+    public const ISTATES = ['Draft', 'Issued', 'Cancelled'];
+    public const PAYM = ['Bank Transfer', 'Cash', 'Card', 'Online Payment', 'Cheque', 'Other'];
+    public const PAYSTATUS = ['Recorded', 'Reversed', 'Cancelled'];
+    public const DOC_TYPES = ['EoI', 'RFQ', 'Proposal', 'Invoice', 'Payment'];
+    public const DSTATUS = ['Open', 'Responded', 'Closed'];
+    public const STAGES = ['New Lead', 'Contacted', 'Qualified', 'Inquiry', 'Proposal', 'Negotiation', 'Won', 'Lost'];
 
     public const DEFAULTS = [
         'currency' => 'GBP',
@@ -45,11 +53,11 @@ class Crm
     ];
 
     private const TONE = [
-        'good' => ['Qualified', 'Won', 'Completed', 'Customer'],
-        'warn' => ['Not Contacted', 'In Progress', 'Proposal Required', 'Pending', 'Rescheduled'],
-        'info' => ['Contacted', 'New', 'Proposal Sent'],
+        'good' => ['Qualified', 'Won', 'Completed', 'Customer', 'Accepted', 'Paid', 'Recorded', 'Responded'],
+        'warn' => ['Not Contacted', 'In Progress', 'Proposal Required', 'Pending', 'Rescheduled', 'Partially Paid', 'Under Discussion'],
+        'info' => ['Contacted', 'New', 'Proposal Sent', 'Sent', 'Issued', 'Open', 'Received'],
         'brand' => ['Negotiation'],
-        'bad' => ['Lost', 'Overdue', 'Cancelled'],
+        'bad' => ['Lost', 'Overdue', 'Cancelled', 'Rejected', 'Reversed'],
     ];
 
     private static ?array $settings = null;
@@ -106,6 +114,13 @@ class Crm
         return self::isAdmin() ? self::agents() : [self::me()];
     }
 
+    /** Validation rule: the company exists and the current user may work on it. */
+    public static function visibleCompanyRule(): \Illuminate\Validation\Rules\Exists
+    {
+        return \Illuminate\Validation\Rule::exists('companies', 'id')
+            ->where(fn ($q) => self::isAdmin() ? $q : $q->where('agent', self::me()));
+    }
+
     public static function tone(?string $status): string
     {
         foreach (self::TONE as $tone => $list) {
@@ -127,6 +142,25 @@ class Crm
             ->max() ?? 0;
 
         return $prefix.'-'.str_pad($max + 1, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Sum amounts that may be in different currencies, e.g. "£1,200.00 · AED 500.00".
+     *
+     * @param  iterable<array{0: ?string, 1: float|int|string}>  $pairs  [currency, amount]
+     */
+    public static function sumByCurrency(iterable $pairs): string
+    {
+        $totals = [];
+        foreach ($pairs as [$cur, $amount]) {
+            $cur = $cur ?: self::setting('currency');
+            $totals[$cur] = ($totals[$cur] ?? 0) + (float) $amount;
+        }
+        if (! $totals) {
+            return self::money(0);
+        }
+
+        return collect($totals)->map(fn ($v, $c) => self::money($v, $c))->join(' · ');
     }
 
     public static function money(float|int|string|null $amount, ?string $currency = null): string

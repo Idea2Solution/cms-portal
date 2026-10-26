@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -106,6 +107,10 @@ class CompanyController extends Controller
             'inquiries' => fn ($q) => $q->latest('date'),
             'followups' => fn ($q) => $q->orderByRaw("status <> 'Pending'")->orderBy('due'),
             'remarks' => fn ($q) => $q->latest()->latest('id'),
+            'proposals' => fn ($q) => $q->latest('date'),
+            'invoices' => fn ($q) => $q->withPaid()->latest('date'),
+            'payments' => fn ($q) => $q->with('invoice:id,currency')->latest('date'),
+            'documents' => fn ($q) => $q->latest('date'),
         ]);
 
         return view('companies.show', compact('company'));
@@ -143,6 +148,12 @@ class CompanyController extends Controller
     {
         abort_unless(Crm::isAdmin(), 403, 'Only admins can delete records.');
         $wasCustomer = $company->isCustomer();
+        // document rows cascade in the database; their uploaded files have to go by hand
+        foreach ($company->documents as $doc) {
+            foreach ($doc->files ?? [] as $f) {
+                Storage::disk('local')->delete($f['path']);
+            }
+        }
         $company->delete();
 
         return redirect()->route($wasCustomer ? 'customers.index' : 'leads.index')->with('ok', "{$company->name} deleted");

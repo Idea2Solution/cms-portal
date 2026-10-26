@@ -6,7 +6,7 @@
 @php($co = \App\Support\Crm::setting('company')['name'] ?: 'CRM')
 <title>Sign in · {{ $co }}</title>
 @include('partials.favicon')
-<link rel="stylesheet" href="{{ asset('css/crm.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/crm.css') }}?v=3">
 </head>
 <body>
 <div class="auth">
@@ -20,6 +20,6 @@
     <button class="btn pri">Sign in</button>
   </form>
 </div>
-<script src="{{ asset('js/crm.js') }}?v=2"></script>
+<script src="{{ asset('js/crm.js') }}?v=3"></script>
 </body>
 </html>

@@ -6,19 +6,21 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>@yield('title', 'Dashboard') · {{ $crmSettings['company']['name'] }}</title>
 @include('partials.favicon')
-<link rel="stylesheet" href="{{ asset('css/crm.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/crm.css') }}?v=3">
 </head>
 <body>
 @php
   $nav = [
     ['dashboard', 'Dashboard', 0],
     ['leads.index', 'Leads', 0],
+    ['pipeline', 'Pipeline', 0],
     ['inquiries.index', 'Inquiries', 0],
     ['followups.index', 'Follow-ups', $overdueCount],
   ];
   if (\App\Support\Crm::customersOn()) {
       $nav[] = ['customers.index', 'Customers', 0];
   }
+  $nav[] = ['documents.index', 'Documents', 0];
   if ($isAdmin) {
       $nav[] = ['settings.index', 'Settings', 0];
   }
@@ -47,6 +49,11 @@
           <a href="{{ route('leads.create') }}">Lead</a>
           <a href="{{ route('inquiries.create', array_filter(['company' => $cid])) }}">Inquiry</a>
           <a href="{{ route('followups.create', array_filter(['company' => $cid])) }}">Follow-up</a>
+          <a href="{{ route('proposals.create', array_filter(['company' => $cid])) }}">Proposal</a>
+          <a href="{{ route('invoices.create', array_filter(['company' => $cid])) }}">Invoice</a>
+          <a href="{{ route('payments.create') }}">Payment</a>
+          <a href="{{ route('documents.create', array_filter(['type' => 'EoI', 'company' => $cid])) }}">EoI</a>
+          <a href="{{ route('documents.create', array_filter(['type' => 'RFQ', 'company' => $cid])) }}">RFQ</a>
         </div>
       </div>
       <form method="POST" action="{{ route('logout') }}" class="inline">@csrf<button class="btn sm">Log out</button></form>
@@ -79,6 +86,6 @@
 @stack('modals')
 <div id="toast"></div>
 <div id="flash" data-msg="{{ session('ok') ?? ($errors->any() ? 'Please check the highlighted fields' : (session('err') ?? '')) }}" data-kind="{{ session('ok') ? '' : 'err' }}"></div>
-<script src="{{ asset('js/crm.js') }}?v=2"></script>
+<script src="{{ asset('js/crm.js') }}?v=3"></script>
 </body>
 </html>

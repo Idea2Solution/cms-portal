@@ -28,6 +28,8 @@
     <a class="btn sm" href="{{ route('companies.edit', $c) }}">Edit</a>
     <a class="btn sm" href="{{ route('inquiries.create', ['company' => $c->id]) }}">+ Inquiry</a>
     <a class="btn sm" href="{{ route('followups.create', ['company' => $c->id]) }}">+ Follow-up</a>
+    <a class="btn sm" href="{{ route('proposals.create', ['company' => $c->id]) }}">+ Proposal</a>
+    <a class="btn sm" href="{{ route('invoices.create', ['company' => $c->id]) }}">+ Invoice</a>
     @unless ($isC || ! Crm::customersOn())
       <form class="inline" method="POST" action="{{ route('companies.convert', $c) }}" data-confirm="Convert {{ $c->name }} to a customer? All inquiries and history stay on the same record.">@csrf<button class="btn sm pri">Convert to customer</button></form>
     @endunless
@@ -110,6 +112,41 @@
         </div>
       @empty
         <div class="mut" style="padding:6px 0">No follow-ups scheduled.</div>
+      @endforelse
+    </div>
+
+    @if ($c->invoices->isNotEmpty())
+      @php
+        $billed = $c->invoices->whereNotIn('state', ['Draft', 'Cancelled']);
+      @endphp
+      <div class="card"><h3>Account</h3>
+        <dl class="kv">
+          <dt>Invoiced</dt><dd>{{ Crm::sumByCurrency($billed->map(fn ($i) => [$i->currency, $i->total])) }}</dd>
+          <dt>Outstanding</dt><dd>{{ Crm::sumByCurrency($billed->filter->isOpen()->map(fn ($i) => [$i->currency, $i->balance()])) }}</dd>
+          <dt>Payments</dt><dd>{{ $c->payments->where('status', 'Recorded')->count() }} recorded</dd>
+        </dl>
+      </div>
+    @endif
+
+    <div class="card"><h3>Documents
+        <span class="btns">
+          <a class="btn sm" href="{{ route('documents.create', ['type' => 'EoI', 'company' => $c->id]) }}">+ EoI</a>
+          <a class="btn sm" href="{{ route('documents.create', ['type' => 'RFQ', 'company' => $c->id]) }}">+ RFQ</a>
+        </span></h3>
+      @php
+        $docRows = collect()
+          ->concat($c->documents->map(fn ($d) => ['ref' => $d->code, 't' => $d->type, 'url' => route('documents.edit', $d), 'x' => '', 's' => $d->status]))
+          ->concat($c->proposals->map(fn ($p) => ['ref' => $p->code, 't' => 'Proposal', 'url' => route('proposals.edit', $p), 'x' => Crm::money($p->total, $p->currency), 's' => $p->status]))
+          ->concat($c->invoices->map(fn ($i) => ['ref' => $i->code, 't' => 'Invoice', 'url' => route('invoices.edit', $i), 'x' => Crm::money($i->total, $i->currency), 's' => $i->status()]))
+          ->concat($c->payments->map(fn ($p) => ['ref' => $p->code, 't' => 'Payment', 'url' => route('payments.edit', $p), 'x' => Crm::money($p->amount, $p->invoice->currency), 's' => $p->status]));
+      @endphp
+      @forelse ($docRows as $d)
+        <div class="li" data-act="go" data-href="{{ $d['url'] }}" style="cursor:pointer">
+          <div><b>{{ $d['ref'] }}</b> <span class="mut">{{ $d['t'] }}</span></div>
+          <div class="nw">{{ $d['x'] }} <x-badge :text="$d['s']" /></div>
+        </div>
+      @empty
+        <div class="mut" style="padding:6px 0">No documents yet.</div>
       @endforelse
     </div>
 

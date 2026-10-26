@@ -109,6 +109,9 @@
         @endif
         <a class="btn sm" href="{{ route('settings.export', 'inquiries') }}">Inquiries</a>
         <a class="btn sm" href="{{ route('settings.export', 'followups') }}">Follow-ups</a>
+        <a class="btn sm" href="{{ route('settings.export', 'proposals') }}">Proposals</a>
+        <a class="btn sm" href="{{ route('settings.export', 'invoices') }}">Invoices</a>
+        <a class="btn sm" href="{{ route('settings.export', 'payments') }}">Payments</a>
       </div>
     </div>
   </div>

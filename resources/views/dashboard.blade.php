@@ -26,17 +26,21 @@
   {!! $kpi('Overdue follow-ups', $kpis['overdue'], route('followups.index', ['tab' => 'overdue']), $kpis['overdue'] ? 'alert' : '') !!}
   {!! $kpi("Today's follow-ups", $kpis['today'], route('followups.index', ['tab' => 'due'])) !!}
   {!! $kpi('Open inquiries', $kpis['openInquiries'], route('inquiries.index')) !!}
-  {!! $kpi("Won / Lost ($label)", $kpis['won'].' / '.$kpis['lost'], route('inquiries.index', ['status' => 'Won'])) !!}
+  {!! $kpi("Proposals sent ($label)", $kpis['proposalsSent'], route('documents.index', ['type' => 'Proposal'])) !!}
+  {!! $kpi("Won / Lost ($label)", $kpis['won'].' / '.$kpis['lost'], route('pipeline')) !!}
   @if (\App\Support\Crm::customersOn())
     {!! $kpi('Customers', $kpis['customers'], route('customers.index')) !!}
   @endif
+  {!! $kpi('Pipeline value', $kpis['pipelineValue'], route('pipeline'), 'mny') !!}
+  {!! $kpi('Outstanding invoices', $kpis['outstanding'], route('documents.index', ['type' => 'Invoice']), 'mny') !!}
+  {!! $kpi("Payments received ($label)", $kpis['received'], route('documents.index', ['type' => 'Payment']), 'mny') !!}
 </div>
 
 <div class="card" style="margin-bottom:14px">
-  <h3>Pipeline <span class="mut" style="font-weight:500;font-size:12.5px">Stages update automatically from lead status and inquiries</span></h3>
+  <h3>Pipeline <a class="lnk" href="{{ route('pipeline') }}" style="font-size:12.5px">Open board →</a></h3>
   <div class="strip">
     @foreach ($stages as $s => $n)
-      <div><b>{{ $n }}</b><span>{{ $s }}</span></div>
+      <div data-act="go" data-href="{{ route('pipeline') }}"><b>{{ $n }}</b><span>{{ $s }}</span></div>
     @endforeach
   </div>
 </div>

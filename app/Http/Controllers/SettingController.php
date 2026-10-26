@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Followup;
 use App\Models\Inquiry;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\Proposal;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\Crm;
@@ -107,6 +110,9 @@ class SettingController extends Controller
             'customers' => [Company::customers(), ['customer_no', 'code', 'name', 'category', 'contact', 'phone', 'whatsapp', 'email', 'website', 'city', 'country', 'agent', 'status', 'converted_at']],
             'inquiries' => [Inquiry::with('company:id,name'), ['code', 'company', 'date', 'source', 'agent', 'category', 'service', 'requirement', 'budget_from', 'budget_to', 'start_date', 'priority', 'status', 'closed_at']],
             'followups' => [Followup::with('company:id,name'), ['code', 'company', 'due', 'method', 'purpose', 'agent', 'status', 'outcome', 'completed_at']],
+            'proposals' => [Proposal::with('company:id,name'), ['code', 'company', 'date', 'valid_until', 'agent', 'status', 'currency', 'subtotal', 'discount', 'tax', 'total', 'lines']],
+            'invoices' => [Invoice::withPaid()->with('company:id,name'), ['code', 'company', 'date', 'due', 'project', 'agent', 'state', 'invoice_status', 'currency', 'total', 'paid', 'balance', 'lines']],
+            'payments' => [Payment::with(['company:id,name', 'invoice:id,code,currency']), ['code', 'company', 'invoice', 'date', 'method', 'amount', 'currency', 'reference', 'status']],
         };
 
         return response()->streamDownload(function () use ($query, $cols) {
@@ -115,7 +121,18 @@ class SettingController extends Controller
             fputcsv($out, $cols);
             $query->orderBy('id')->chunk(500, function ($rows) use ($out, $cols) {
                 foreach ($rows as $r) {
-                    fputcsv($out, array_map(fn ($c) => $c === 'company' ? $r->company?->name : (string) $r->{$c}, $cols));
+                    fputcsv($out, array_map(fn ($c) => match ($c) {
+                        'company' => $r->company?->name,
+                        'invoice' => $r->invoice?->code,
+                        'currency' => $r->currency ?? $r->invoice?->currency,
+                        'invoice_status' => $r->status(),
+                        'paid' => $r->paid(),
+                        'balance' => $r->balance(),
+                        'lines' => collect($r->items)->map(fn ($i) => "{$i['service']} x{$i['qty']} @{$i['price']}")->join(' | '),
+                        default => $r->{$c} instanceof \DateTimeInterface
+                            ? $r->{$c}->format($r->{$c}->format('H:i') === '00:00' ? 'Y-m-d' : 'Y-m-d H:i')
+                            : (string) $r->{$c},
+                    }, $cols));
                 }
             });
             fclose($out);

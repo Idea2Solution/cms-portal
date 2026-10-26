@@ -36,6 +36,26 @@ class Company extends Model
         return $this->hasMany(Remark::class);
     }
 
+    public function proposals(): HasMany
+    {
+        return $this->hasMany(Proposal::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
+
     /** With the customers module off, customers are listed with the leads so nothing disappears. */
     public function scopeLeads(Builder $q): Builder
     {
@@ -121,17 +141,18 @@ class Company extends Model
         return true;
     }
 
-    /** Pipeline stage derived from status and inquiries, so nobody has to maintain it by hand. */
+    /** Pipeline stage derived from status, inquiries and proposals, so nobody has to maintain it by hand. */
     public function stage(): string
     {
         $inqs = $this->inquiries;
         $open = $inqs->filter->isOpen();
+        $openProps = $this->proposals->filter->isOpen();
 
-        if ($open->isNotEmpty()) {
-            if ($open->contains('status', 'Negotiation')) {
+        if ($open->isNotEmpty() || $openProps->isNotEmpty()) {
+            if ($open->contains('status', 'Negotiation') || $openProps->whereIn('status', ['Under Discussion', 'Negotiation'])->isNotEmpty()) {
                 return 'Negotiation';
             }
-            if ($open->whereIn('status', ['Proposal Required', 'Proposal Sent'])->isNotEmpty()) {
+            if ($openProps->isNotEmpty() || $open->whereIn('status', ['Proposal Required', 'Proposal Sent'])->isNotEmpty()) {
                 return 'Proposal';
             }
 
@@ -149,5 +170,24 @@ class Company extends Model
             'Contacted' => 'Contacted',
             default => 'New Lead',
         };
+    }
+
+    /** Deal value for a pipeline card: open (or accepted, once won) proposals, else open inquiry budgets. */
+    public function dealValue(string $stage): string
+    {
+        $props = $stage === 'Won'
+            ? $this->proposals->where('status', 'Accepted')
+            : $this->proposals->filter->isOpen();
+
+        if ($props->isNotEmpty()) {
+            return Crm::sumByCurrency($props->map(fn ($p) => [$p->currency, $p->total]));
+        }
+        if (in_array($stage, ['Won', 'Lost'], true)) {
+            return '';
+        }
+
+        $budget = $this->inquiries->filter->isOpen()->sum(fn ($i) => (float) ($i->budget_to ?: $i->budget_from));
+
+        return $budget ? Crm::money($budget) : '';
     }
 }

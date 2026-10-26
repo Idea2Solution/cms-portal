@@ -5,14 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Followup;
 use App\Models\Inquiry;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\Proposal;
 use App\Support\Crm;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public const STAGES = ['New Lead', 'Contacted', 'Qualified', 'Inquiry', 'Proposal', 'Negotiation', 'Won', 'Lost'];
-
     public function __invoke(Request $request): View
     {
         $period = in_array((int) $request->query('period', 30), [7, 30, 90, 0], true) ? (int) $request->query('period', 30) : 30;
@@ -35,21 +36,21 @@ class DashboardController extends Controller
             'won' => $closedIn('Won'),
             'lost' => $closedIn('Lost'),
             'customers' => Company::visible()->customers()->count(),
+            'proposalsSent' => Proposal::visible()->where('status', '!=', 'Draft')
+                ->when($from, fn ($q) => $q->where('date', '>=', $from))->count(),
+            'pipelineValue' => Crm::sumByCurrency(Proposal::visible()
+                ->whereIn('status', ['Sent', 'Under Discussion', 'Negotiation'])
+                ->get(['currency', 'total'])->map(fn ($p) => [$p->currency, $p->total])),
+            'outstanding' => Crm::sumByCurrency(Invoice::visible()->open()->withPaid()->get()
+                ->map(fn ($i) => [$i->currency, $i->balance()])),
+            'received' => Crm::sumByCurrency(Payment::visible()->where('status', 'Recorded')
+                ->when($from, fn ($q) => $q->where('date', '>=', $from))
+                ->with('invoice:id,currency')->get()
+                ->map(fn ($p) => [$p->invoice->currency, $p->amount])),
         ];
 
-        // Pipeline strip: Won/Lost only count when closed in the last 30 days, like the board in the design
-        $stages = array_fill_keys(self::STAGES, 0);
-        $cut = today()->subDays(30);
-        Company::visible()->live()->with('inquiries:id,company_id,status,closed_at')->get()->each(function (Company $c) use (&$stages, $cut) {
-            $stage = $c->stage();
-            if (in_array($stage, ['Won', 'Lost'], true)) {
-                $closed = $c->inquiries->where('status', $stage)->max('closed_at') ?? $c->converted_at;
-                if ($closed && $closed->lt($cut)) {
-                    return;
-                }
-            }
-            $stages[$stage]++;
-        });
+        // Pipeline strip uses the same grouping as the board
+        $stages = array_map(fn ($cards) => $cards->count(), PipelineController::board());
 
         $followups = Followup::visible()->pending()
             ->whereDate('due', '<=', today())

@@ -3,8 +3,14 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FollowupController;
 use App\Http\Controllers\InquiryController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PdfController;
+use App\Http\Controllers\PipelineController;
+use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +47,20 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('followups', FollowupController::class)->except('show');
     Route::post('/followups/{followup}/complete', [FollowupController::class, 'complete'])->name('followups.complete');
 
+    Route::get('/pipeline', PipelineController::class)->name('pipeline');
+
+    // Sales documents: EoI/RFQ, proposals, invoices, payments (all listed on /documents)
+    Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    Route::resource('documents', DocumentController::class)->except(['index', 'show']);
+    Route::get('/documents/{document}/files/{index}', [DocumentController::class, 'download'])->whereNumber('index')->name('documents.download');
+    Route::resource('proposals', ProposalController::class)->except(['index', 'show']);
+    Route::resource('invoices', InvoiceController::class)->except(['index', 'show']);
+    Route::resource('payments', PaymentController::class)->only(['create', 'store', 'edit', 'update']);
+
+    Route::get('/pdf/proposal/{proposal}', [PdfController::class, 'proposal'])->name('pdf.proposal');
+    Route::get('/pdf/invoice/{invoice}', [PdfController::class, 'invoice'])->name('pdf.invoice');
+    Route::get('/pdf/receipt/{payment}', [PdfController::class, 'receipt'])->name('pdf.receipt');
+
     // Admin only: settings and sales team logins
     Route::middleware('admin')->group(function () {
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
@@ -48,7 +68,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/settings/list', [SettingController::class, 'addItem'])->name('settings.list.add');
         Route::delete('/settings/list', [SettingController::class, 'removeItem'])->name('settings.list.remove');
         Route::get('/settings/export/{type}', [SettingController::class, 'export'])
-            ->whereIn('type', ['leads', 'customers', 'inquiries', 'followups'])
+            ->whereIn('type', ['leads', 'customers', 'inquiries', 'followups', 'proposals', 'invoices', 'payments'])
             ->name('settings.export');
 
         Route::post('/settings/users', [UserController::class, 'store'])->name('users.store');
