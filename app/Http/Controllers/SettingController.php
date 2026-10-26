@@ -39,6 +39,14 @@ class SettingController extends Controller
             'company.phone' => ['nullable', 'string', 'max:50'],
             'company.website' => ['nullable', 'string', 'max:255'],
             'company.address' => ['nullable', 'string', 'max:500'],
+        ], [], [
+            'taxPct' => 'default tax %',
+            'company.name' => 'company name',
+            'company.tagline' => 'tagline',
+            'company.email' => 'company email',
+            'company.phone' => 'company phone',
+            'company.website' => 'website',
+            'company.address' => 'address',
         ]);
 
         $this->put('currency', $v['currency']);

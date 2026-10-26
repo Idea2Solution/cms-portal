@@ -6,7 +6,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>@yield('title', 'Dashboard') · {{ $crmSettings['company']['name'] }}</title>
 @include('partials.favicon')
-<link rel="stylesheet" href="{{ asset('css/crm.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/crm.css') }}?v=4">
 </head>
 <body>
 @php
@@ -86,6 +86,6 @@
 @stack('modals')
 <div id="toast"></div>
 <div id="flash" data-msg="{{ session('ok') ?? ($errors->any() ? 'Please check the highlighted fields' : (session('err') ?? '')) }}" data-kind="{{ session('ok') ? '' : 'err' }}"></div>
-<script src="{{ asset('js/crm.js') }}?v=3"></script>
+<script src="{{ asset('js/crm.js') }}?v=4"></script>
 </body>
 </html>

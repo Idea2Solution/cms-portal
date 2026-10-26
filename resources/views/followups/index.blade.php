@@ -35,7 +35,7 @@
           <td>{{ $f->method }}</td>
           <td>{{ $f->agent ?: '—' }}</td>
           <td>@if ($f->inquiry)<a class="lnk" href="{{ route('inquiries.edit', $f->inquiry_id) }}">{{ $f->inquiry->code }}</a>@else — @endif</td>
-          <td><x-badge :text="$f->status" /></td>
+          <td><x-badge :text="$f->isOverdue() ? 'Overdue' : $f->status" /></td>
           <td>{{ Str::limit($f->outcome, 50) }}</td>
           <td class="nw">
             @if ($f->status === 'Pending')

@@ -26,7 +26,8 @@ class DocumentRequest extends FormRequest
             'status' => ['required', Rule::in(Crm::DSTATUS)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'files' => ['nullable', 'array', 'max:10'],
-            'files.*' => ['file', 'max:20480', 'mimes:pdf,png,jpg,jpeg,webp,doc,docx,xls,xlsx,csv,txt'],
+            // both checks: `extensions` looks at the file name, `mimes` at the actual content
+            'files.*' => ['file', 'max:20480', 'extensions:pdf,png,jpg,jpeg,webp,doc,docx,xls,xlsx,csv,txt', 'mimes:pdf,png,jpg,jpeg,webp,doc,docx,xls,xlsx,csv,txt'],
             'remove_files' => ['nullable', 'array'],
             'remove_files.*' => ['string'],
         ];
@@ -34,6 +35,15 @@ class DocumentRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['files.*.max' => 'Each file can be at most 20 MB.'];
+        return [
+            'files.*.max' => 'Each file can be at most 20 MB.',
+            'files.*.extensions' => 'Only PDF, image, Word, Excel, CSV or text files can be attached.',
+            'files.*.mimes' => 'Only PDF, image, Word, Excel, CSV or text files can be attached.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return ['files.*' => 'file', 'company_id' => 'lead / customer', 'inquiry_id' => 'inquiry'];
     }
 }

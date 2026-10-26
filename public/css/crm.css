@@ -154,7 +154,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid rgba(242,107,29,.3);bo
 #toast.err{background:var(--bad)}
 @media (max-width:860px){
   #app{flex-direction:column}
-  #side{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:10px 12px}
+  #side{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:10px 12px;align-self:stretch;min-width:0;overflow:visible}
   .logo{padding-bottom:8px}
   .nav{display:flex;gap:4px;overflow-x:auto}
   .nav a{white-space:nowrap}

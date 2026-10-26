@@ -45,6 +45,22 @@ class LeadRequest extends FormRequest
         ];
     }
 
+    public function attributes(): array
+    {
+        return [
+            'name' => 'company name',
+            'category' => 'business category',
+            'contact' => 'contact person',
+            'phone' => 'primary phone',
+            'phone2' => 'secondary phone',
+            'source' => 'lead source',
+            'agent' => 'assigned agent',
+            'priority' => 'temperature',
+            'next_fu' => 'follow-up date',
+            'socials.*.url' => 'social media link',
+        ];
+    }
+
     public function messages(): array
     {
         return ['name.unique' => 'A lead or customer with this name already exists.'];

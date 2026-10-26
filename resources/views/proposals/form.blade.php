@@ -26,7 +26,9 @@
       @if ($p->status === 'Accepted')
         <a class="btn sm pri" href="{{ route('invoices.create', ['proposal' => $p->id]) }}">Create invoice</a>
       @endif
-      <form class="inline" method="POST" action="{{ route('proposals.destroy', $p) }}" data-confirm="Delete proposal {{ $p->code }}?">@csrf @method('DELETE')<button class="btn sm danger">Delete</button></form>
+      @if ($isAdmin)
+        <form class="inline" method="POST" action="{{ route('proposals.destroy', $p) }}" data-confirm="Delete proposal {{ $p->code }}?">@csrf @method('DELETE')<button class="btn sm danger">Delete</button></form>
+      @endif
     </div>
   @endif
 </div>

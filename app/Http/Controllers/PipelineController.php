@@ -26,7 +26,8 @@ class PipelineController extends Controller
      */
     public static function board(?string $agent = null): array
     {
-        $board = array_fill_keys(Crm::STAGES, collect());
+        // one collection per stage (array_fill_keys would share a single instance across all of them)
+        $board = array_combine(Crm::STAGES, array_map(fn () => collect(), Crm::STAGES));
         $cut = today()->subDays(30);
 
         Company::visible()->live()

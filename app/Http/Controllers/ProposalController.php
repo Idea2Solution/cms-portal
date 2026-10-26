@@ -92,6 +92,7 @@ class ProposalController extends Controller
     public function destroy(Proposal $proposal): RedirectResponse
     {
         $this->guard($proposal);
+        abort_unless(Crm::isAdmin(), 403, 'Only admins can delete proposals – set it to Cancelled instead.');
         $company = $proposal->company;
         $proposal->delete();
         $company->log("Proposal {$proposal->code} deleted");

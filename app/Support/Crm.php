@@ -132,16 +132,28 @@ class Crm
         return 'mute';
     }
 
-    /** Next sequential code such as P-00012, based on the highest existing one. */
+    /**
+     * Next sequential code such as P-00012. The last number per prefix is kept in `sequences`
+     * (row-locked), so codes of deleted records are never handed out again.
+     */
     public static function nextCode(string $modelClass, string $prefix, string $column = 'code'): string
     {
-        $max = $modelClass::query()
-            ->where($column, 'like', $prefix.'-%')
-            ->pluck($column)
-            ->map(fn ($c) => (int) substr($c, strlen($prefix) + 1))
-            ->max() ?? 0;
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($modelClass, $prefix, $column) {
+            $table = \Illuminate\Support\Facades\DB::table('sequences');
+            $last = $table->where('prefix', $prefix)->lockForUpdate()->value('last');
 
-        return $prefix.'-'.str_pad($max + 1, 5, '0', STR_PAD_LEFT);
+            // first use of a prefix, or rows added before sequences existed: start after the highest code in use
+            $max = $modelClass::query()
+                ->where($column, 'like', $prefix.'-%')
+                ->pluck($column)
+                ->map(fn ($c) => (int) substr($c, strlen($prefix) + 1))
+                ->max() ?? 0;
+
+            $next = max((int) $last, $max) + 1;
+            $table->updateOrInsert(['prefix' => $prefix], ['last' => $next]);
+
+            return $prefix.'-'.str_pad($next, 5, '0', STR_PAD_LEFT);
+        });
     }
 
     /**
